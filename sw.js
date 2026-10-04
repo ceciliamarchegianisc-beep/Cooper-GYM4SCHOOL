@@ -1,4 +1,4 @@
-const CACHE='cooper-gym4school-v4';
+const CACHE='cooper-gym4school-v5';
 const ASSETS=['./','./index.html','./manifest.webmanifest'];
 
 self.addEventListener('install',event=>{
