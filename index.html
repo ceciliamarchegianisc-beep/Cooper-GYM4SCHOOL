@@ -22,7 +22,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:16px;ma
 .header-actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:10px 14px;border-radius:12px;font-weight:700;box-shadow:0 1px 2px rgba(16,24,40,.04)}.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}.btn.danger{background:#fff;color:var(--danger);border-color:#f3b4af}.btn.small{padding:8px 10px;font-size:13px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:18px;margin-bottom:16px}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field label{display:block;font-size:13px;font-weight:800;margin-bottom:6px}.field input,.field select{width:100%;border:1px solid #cfd5dd;border-radius:12px;padding:12px;background:#fff;color:var(--ink);outline:none}.field input:focus,.field select:focus{border-color:#111827;box-shadow:0 0 0 3px rgba(17,24,39,.08)}
-.students{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.student-row{display:grid;grid-template-columns:44px 1fr;gap:8px;align-items:center}.num{height:44px;border-radius:12px;background:#eef0f3;display:flex;align-items:center;justify-content:center;font-weight:900}.student-row input{height:44px}
+.students{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.student-row{display:grid;grid-template-columns:44px minmax(0,1fr) 64px;gap:8px;align-items:center}.num{height:44px;border-radius:12px;background:#eef0f3;display:flex;align-items:center;justify-content:center;font-weight:900}.student-row input{height:44px}.student-row select{height:44px;border:1px solid #cfd5dd;border-radius:12px;padding:8px 6px;background:#fff;color:var(--ink);font-weight:800;text-align:center}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.note{color:var(--muted);font-size:13px;line-height:1.4}
 .hidden{display:none!important}
 #testScreen{min-height:calc(100vh - 40px);display:flex;flex-direction:column}
@@ -31,10 +31,10 @@ header{display:flex;align-items:center;justify-content:space-between;gap:16px;ma
 .student-card{position:relative;user-select:none;border:8px solid #fff;border-radius:22px;box-shadow:0 0 0 2px rgba(16,24,40,.16),0 8px 20px rgba(16,24,40,.10);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:190px;overflow:hidden;touch-action:manipulation;transition:transform .08s ease,filter .08s ease}.student-card:active{transform:scale(.985)}.student-card.flash{z-index:3;animation:tapPulse 2s ease-out}.student-num{font-size:clamp(54px,9vw,110px);line-height:.9;font-weight:950;text-shadow:0 1px 1px rgba(0,0,0,.12)}.student-name{font-size:clamp(16px,2.3vw,26px);font-weight:850;margin-top:9px;max-width:92%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.laps{font-size:clamp(16px,2.5vw,28px);font-weight:800;margin-top:8px}.tap-msg{position:absolute;top:10px;right:12px;font-size:14px;font-weight:950;padding:7px 10px;border-radius:999px;background:#fff;opacity:0;transform:translateY(-6px) scale(.9);box-shadow:0 3px 12px rgba(0,0,0,.18);transition:.18s}.student-card.flash .tap-msg{opacity:1;transform:translateY(0) scale(1)}@keyframes tapPulse{0%{transform:scale(.985);filter:brightness(1.45)}10%{transform:scale(1.03);filter:brightness(1.5);box-shadow:0 0 0 6px rgba(255,255,255,.95),0 0 0 13px rgba(17,24,39,.55),0 14px 34px rgba(16,24,40,.28)}35%{transform:scale(1.015);filter:brightness(1.28);box-shadow:0 0 0 5px rgba(255,255,255,.9),0 0 0 11px rgba(17,24,39,.45),0 12px 30px rgba(16,24,40,.22)}70%{transform:scale(1.005);filter:brightness(1.16);box-shadow:0 0 0 4px rgba(255,255,255,.75),0 0 0 8px rgba(17,24,39,.3),0 10px 24px rgba(16,24,40,.16)}100%{transform:scale(1);filter:brightness(1);box-shadow:0 0 0 2px rgba(16,24,40,.16),0 8px 20px rgba(16,24,40,.10)}}
 .c1{background:#6ee7b7}.c2{background:#60a5fa}.c3{background:#fde047}.c4{background:#f87171}.c5{background:#fb923c}.c6{background:#c084fc}.c7{background:#f472b6}.c8{background:#67e8f9}
 .zero-state{display:flex;align-items:center;justify-content:center;color:var(--muted);padding:20px;text-align:center}
-.results h2{margin:0 0 10px}.table-wrap{overflow:auto}.results table{border-collapse:collapse;width:100%;min-width:520px}.results th,.results td{padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:left}.results th{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+.results h2{margin:0 0 10px}.table-wrap{overflow:auto}.results table{border-collapse:collapse;width:100%;min-width:520px}.results th,.results td{padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:left}.results th{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}.results tr.gender-female{color:#b0175c}.results tr.gender-male{color:#1558b0}
 .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 14px;border-radius:999px;box-shadow:var(--shadow);font-weight:700;z-index:100;opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1}
 .modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:90}.modal{background:#fff;border-radius:18px;max-width:430px;width:100%;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.22)}.modal h3{margin:0 0 8px}.modal p{color:var(--muted);line-height:1.45}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
-#settingsScreen > .panel:first-of-type{background:#fffbea;border-color:#eadf9a}\n@media (max-width:800px){.app{padding:12px}.grid{grid-template-columns:1fr}.students{grid-template-columns:1fr 1fr}.test-meta{display:none}.live-grid{gap:16px}.button-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.board-timer{flex-basis:82px}.student-card{min-height:0}}
+#settingsScreen > .panel:first-of-type{background:#fffbea;border-color:#eadf9a}\n@media (max-width:800px){.app{padding:12px}.grid{grid-template-columns:1fr}.students{grid-template-columns:1fr 1fr}.test-meta{display:none}.live-grid{gap:16px}.button-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.board-timer{flex-basis:82px}.student-card{min-height:0}.student-row{grid-template-columns:40px minmax(0,1fr) 58px}}
 @media (max-width:520px){.students{grid-template-columns:1fr}.live-grid{gap:12px}.button-row{gap:14px}.board-timer{flex-basis:70px}.student-card{min-height:0;border-width:7px}.student-name{font-size:16px}.laps{font-size:18px}}
 </style>
 </head>
@@ -93,7 +93,7 @@ function buildHistoryRecord(session){
     className:session.className,
     duration:session.duration,
     circuit:session.circuit,
-    students:session.students.map(s=>({n:s.n,name:s.name,laps:s.laps,meters:s.laps*session.circuit}))
+    students:session.students.map(s=>({n:s.n,name:s.name,gender:s.gender||'',laps:s.laps,meters:s.laps*session.circuit}))
   };
 }
 async function getHistoryList(){
@@ -161,8 +161,8 @@ function playTapSound(n=1){
   }catch(e){}
 }
 function showConfirm(title,text,onConfirm){$('modalTitle').textContent=title;$('modalText').textContent=text;$('modalBackdrop').classList.remove('hidden');const yes=$('modalConfirm');const no=$('modalCancel');const cleanup=()=>{$('modalBackdrop').classList.add('hidden');yes.onclick=null;no.onclick=null};no.onclick=cleanup;yes.onclick=()=>{cleanup();onConfirm()}}
-function renderInputs(names){const box=$('studentInputs');box.innerHTML='';for(let i=0;i<8;i++){const row=document.createElement('div');row.className='student-row';row.innerHTML='<div class="num">'+(i+1)+'</div><input data-idx="'+i+'" placeholder="Nome alunno '+(i+1)+'" value="'+escapeHtml(names[i]?.name||'')+'">';box.appendChild(row)}}
-function currentStudents(){return [...document.querySelectorAll('#studentInputs input')].map((el,i)=>({n:i+1,name:el.value.trim(),laps:0,lastTap:0,rapidIgnored:0,tapGuardUntil:0})).filter(x=>x.name)}
+function renderInputs(names){const box=$('studentInputs');box.innerHTML='';for(let i=0;i<8;i++){const row=document.createElement('div');row.className='student-row';const gender=names[i]?.gender||'';row.innerHTML='<div class="num">'+(i+1)+'</div><input data-idx="'+i+'" placeholder="Nome alunno '+(i+1)+'" value="'+escapeHtml(names[i]?.name||'')+'"><select data-gender-idx="'+i+'" aria-label="Genere alunno '+(i+1)+'"><option value=""'+(gender===''?' selected':'')+'>—</option><option value="F"'+(gender==='F'?' selected':'')+'>F</option><option value="M"'+(gender==='M'?' selected':'')+'>M</option></select>';box.appendChild(row)}}
+function currentStudents(){return [...document.querySelectorAll('#studentInputs input')].map((el,i)=>({n:i+1,name:el.value.trim(),gender:document.querySelector('#studentInputs select[data-gender-idx="'+i+'"]')?.value||'',laps:0,lastTap:0,rapidIgnored:0,tapGuardUntil:0})).filter(x=>x.name)}
 function renderHistory(items){
   const c=$('historyContent');
   if(!items.length){
@@ -188,7 +188,8 @@ function renderHistory(items){
     html+='<div style="margin-top:16px"><h3 style="margin:0 0 10px">CLASSIFICA — dal più veloce al meno veloce</h3>';
     html+='<div class="table-wrap"><table><thead><tr><th>Pos.</th><th>N.</th><th>Alunno</th><th>Giri</th><th>Metri</th></tr></thead><tbody>';
     ranking.forEach((s,idx)=>{
-      html+='<tr><td><strong>'+(idx+1)+'</strong></td><td>'+s.n+'</td><td>'+escapeHtml(s.name||'')+'</td><td><strong>'+s.laps+'</strong></td><td><strong>'+s.meters+' m</strong></td></tr>';
+      const genderClass=s.gender==='F'?'gender-female':(s.gender==='M'?'gender-male':'');
+      html+='<tr class="'+genderClass+'"><td><strong>'+(idx+1)+'</strong></td><td>'+s.n+'</td><td><strong>'+escapeHtml(s.name||'')+'</strong></td><td><strong>'+s.laps+'</strong></td><td><strong>'+s.meters+' m</strong></td></tr>';
     });
     html+='</tbody></table></div>';
     html+='<div class="note" style="margin-top:8px">Classifica ordinata per <strong>metri percorsi</strong>; a parità di metri prevalgono i giri.</div></div>';
@@ -196,7 +197,8 @@ function renderHistory(items){
     html+='<details style="margin-top:12px"><summary>Dettaglio prova</summary>';
     html+='<div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>N.</th><th>Alunno</th><th>Giri</th><th>Metri</th></tr></thead><tbody>';
     ranking.forEach(s=>{
-      html+='<tr><td>'+s.n+'</td><td>'+escapeHtml(s.name||'')+'</td><td>'+s.laps+'</td><td>'+s.meters+' m</td></tr>';
+      const genderClass=s.gender==='F'?'gender-female':(s.gender==='M'?'gender-male':'');
+      html+='<tr class="'+genderClass+'"><td>'+s.n+'</td><td><strong>'+escapeHtml(s.name||'')+'</strong></td><td>'+s.laps+'</td><td>'+s.meters+' m</td></tr>';
     });
     html+='</tbody></table></div></details>';
     const totalMeters=ranking.reduce((sum,s)=>sum+s.meters,0);
@@ -323,9 +325,9 @@ async function recover(){
   buildLive();$('testMeta').textContent=(s.className?s.className+' · ':'')+s.circuit+' m';
   updateTimer();timerHandle=setInterval(updateTimer,200);showToast('Prova in corso ripristinata');
 }
-$('startBtn').onclick=startTest;$('historyBtn').onclick=showHistory;$('clearBtn').onclick=()=>{document.querySelectorAll('#studentInputs input').forEach(x=>x.value='')};$('menuBtn').onclick=toggleMenu;$('fullscreenBtn').onclick=()=>{closeMenu();fullscreen()};$('restartBtn').onclick=restartTest;$('settingsFromTest').onclick=()=>{closeMenu();returnToSettings()};$('stopBtn').onclick=()=>{closeMenu();stopTest()};document.addEventListener('pointerdown',e=>{if(menuOpen&&!e.target.closest('.menu-wrap'))closeMenu()});
-(async()=>{await openDB();renderInputs(defaultNames);const settings=await dbGet('kv','settings');if(settings){$('className').value=settings.className||'';$('duration').value=settings.duration||6;$('circuit').value=settings.circuit||200;renderInputs(settings.names||defaultNames)};document.querySelectorAll('#studentInputs input').forEach(i=>i.addEventListener('input',async()=>{const names=[...document.querySelectorAll('#studentInputs input')].map(x=>({name:x.value}));await dbPut('kv','settings',{className:$('className').value,duration:$('duration').value,circuit:$('circuit').value,names})}));$('className').addEventListener('input',saveSettings);$('duration').addEventListener('change',saveSettings);$('circuit').addEventListener('input',saveSettings);await recover()})();
-async function saveSettings(){const names=[...document.querySelectorAll('#studentInputs input')].map(x=>({name:x.value}));await dbPut('kv','settings',{className:$('className').value,duration:$('duration').value,circuit:$('circuit').value,names})}
+$('startBtn').onclick=startTest;$('historyBtn').onclick=showHistory;$('clearBtn').onclick=()=>{document.querySelectorAll('#studentInputs input').forEach(x=>x.value='');document.querySelectorAll('#studentInputs select').forEach(x=>x.value='');saveSettings()};$('menuBtn').onclick=toggleMenu;$('fullscreenBtn').onclick=()=>{closeMenu();fullscreen()};$('restartBtn').onclick=restartTest;$('settingsFromTest').onclick=()=>{closeMenu();returnToSettings()};$('stopBtn').onclick=()=>{closeMenu();stopTest()};document.addEventListener('pointerdown',e=>{if(menuOpen&&!e.target.closest('.menu-wrap'))closeMenu()});
+(async()=>{await openDB();renderInputs(defaultNames);const settings=await dbGet('kv','settings');if(settings){$('className').value=settings.className||'';$('duration').value=settings.duration||6;$('circuit').value=settings.circuit||200;renderInputs(settings.names||defaultNames)};document.querySelectorAll('#studentInputs input').forEach(i=>i.addEventListener('input',saveSettings));document.querySelectorAll('#studentInputs select').forEach(s=>s.addEventListener('change',saveSettings));$('className').addEventListener('input',saveSettings);$('duration').addEventListener('change',saveSettings);$('circuit').addEventListener('input',saveSettings);await recover()})();
+async function saveSettings(){const names=[...document.querySelectorAll('#studentInputs input')].map((x,i)=>({name:x.value,gender:document.querySelector('#studentInputs select[data-gender-idx="'+i+'"]')?.value||''}));await dbPut('kv','settings',{className:$('className').value,duration:$('duration').value,circuit:$('circuit').value,names})}
 window.addEventListener('beforeunload',()=>{if(activeSession&&!activeSession.finished)queueSave()});
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}))}
 </script>
