@@ -140,8 +140,8 @@ function renderHistory(items){
       meters:Number(s.meters||((s.laps||0)*(x.circuit||0)))
     })).sort((a,b)=>b.meters-a.meters || b.laps-a.laps || a.n-b.n);
 
-    html+='<div class="panel history-report" style="margin-bottom:14px;padding:14px">';
-    html+='<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">';
+    html+='<div class="panel history-report" data-session-id="'+escapeHtml(x.sessionId||'')+'" style="margin-bottom:14px;padding:14px">';
+    html+='<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap"><button class="btn small danger" data-delete-session="'+escapeHtml(x.sessionId||'')+'">ELIMINA</button>';
     html+='<div><strong>'+new Date(x.timestamp||Date.now()).toLocaleString('it-IT')+'</strong><div class="note">'+escapeHtml(x.className||'Classe non indicata')+' · '+x.duration+' min · circuito '+x.circuit+' m</div></div>';
     html+='<div><strong>'+status+'</strong></div></div>';
 
@@ -167,6 +167,17 @@ function renderHistory(items){
   $('exportCsv').onclick=()=>exportCSV(items);
   $('clearHistory').onclick=()=>showConfirm('Cancella storico','Vuoi eliminare tutte le prove salvate? Questa operazione non cancella i nomi o le impostazioni.',async()=>{
     await dbPut('kv','historyList',[]);renderHistory([]);showToast('Storico cancellato');
+  });
+  document.querySelectorAll('[data-delete-session]').forEach(btn=>{
+    btn.onclick=()=>{
+      const sessionId=btn.dataset.deleteSession;
+      showConfirm('Elimina prova','Vuoi eliminare solo questa prova dallo storico?',async()=>{
+        const list=await getHistoryList();
+        await dbPut('kv','historyList',list.filter(x=>x.sessionId!==sessionId));
+        renderHistory(await getHistoryList());
+        showToast('Prova eliminata');
+      });
+    };
   });
 }
 function exportCSV(items){const rows=[['data','classe','durata_min','circuito_m','numero','alunno','giri','metri']];for(const x of items){for(const s of x.students)rows.push([new Date(x.timestamp).toISOString(),x.className,x.duration,x.circuit,s.n,s.name,s.laps,s.laps*x.circuit])}const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='cooper-gym4school.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
