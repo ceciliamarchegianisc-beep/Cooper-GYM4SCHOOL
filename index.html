@@ -76,6 +76,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:16px;ma
 const DB_NAME='cooper-gym4school-db', DB_VERSION=1;
 let db=null, activeSession=null, timerHandle=null, saveChain=Promise.resolve(), menuOpen=false;
 const $=id=>document.getElementById(id);
+function isIPadDevice(){return /iPad|Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1;}
 const studentColors=['c1','c2','c3','c4','c5','c6','c7','c8'];
 const defaultNames=Array.from({length:8},()=>({name:'',laps:0,lastTap:0}));
 function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv');if(!d.objectStoreNames.contains('history'))d.createObjectStore('history',{keyPath:'id',autoIncrement:true});};r.onsuccess=()=>{db=r.result;resolve(db)};r.onerror=()=>reject(r.error)});} 
@@ -306,7 +307,7 @@ async function restartTest(){
 }
 async function returnToSettings(){showConfirm('Torna a impostazioni','La prova verrà fermata e il risultato parziale verrà salvato nello storico. Continuare?',()=>finishTest('manual-settings'))}
 async function stopTest(){showConfirm('STOP','La prova verrà fermata e il risultato parziale verrà salvato nello storico. Continuare?',()=>finishTest('stop'))}
-async function fullscreen(){try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen();}catch(e){showToast('Schermo intero non disponibile su questo dispositivo')}}
+async function fullscreen(){if(isIPadDevice()){showToast('Su iPad usa Cooper dalla schermata Home');return}try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen();}catch(e){showToast('Schermo intero non disponibile su questo dispositivo')}}
 async function recover(){
   const s=await dbGet('kv','activeSession');
   if(!s)return;
@@ -325,6 +326,7 @@ async function recover(){
   buildLive();$('testMeta').textContent=(s.className?s.className+' · ':'')+s.circuit+' m';
   updateTimer();timerHandle=setInterval(updateTimer,200);showToast('Prova in corso ripristinata');
 }
+if(isIPadDevice())$('fullscreenBtn').classList.add('hidden');
 $('startBtn').onclick=startTest;$('historyBtn').onclick=showHistory;$('clearBtn').onclick=()=>{document.querySelectorAll('#studentInputs input').forEach(x=>x.value='');document.querySelectorAll('#studentInputs select').forEach(x=>x.value='');saveSettings()};$('menuBtn').onclick=toggleMenu;$('fullscreenBtn').onclick=()=>{closeMenu();fullscreen()};$('restartBtn').onclick=restartTest;$('settingsFromTest').onclick=()=>{closeMenu();returnToSettings()};$('stopBtn').onclick=()=>{closeMenu();stopTest()};document.addEventListener('pointerdown',e=>{if(menuOpen&&!e.target.closest('.menu-wrap'))closeMenu()});
 (async()=>{await openDB();renderInputs(defaultNames);const settings=await dbGet('kv','settings');if(settings){$('className').value=settings.className||'';$('duration').value=settings.duration||6;$('circuit').value=settings.circuit||200;renderInputs(settings.names||defaultNames)};document.querySelectorAll('#studentInputs input').forEach(i=>i.addEventListener('input',saveSettings));document.querySelectorAll('#studentInputs select').forEach(s=>s.addEventListener('change',saveSettings));$('className').addEventListener('input',saveSettings);$('duration').addEventListener('change',saveSettings);$('circuit').addEventListener('input',saveSettings);await recover()})();
 async function saveSettings(){const names=[...document.querySelectorAll('#studentInputs input')].map((x,i)=>({name:x.value,gender:document.querySelector('#studentInputs select[data-gender-idx="'+i+'"]')?.value||''}));await dbPut('kv','settings',{className:$('className').value,duration:$('duration').value,circuit:$('circuit').value,names})}
