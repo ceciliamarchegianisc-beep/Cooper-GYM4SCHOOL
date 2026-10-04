@@ -166,9 +166,15 @@ function renderHistory(items){
   }
   c.innerHTML=html;
   $('exportCsv').onclick=()=>exportCSV(items);
-  $('clearHistory').onclick=()=>showConfirm('Cancella storico','Vuoi eliminare tutte le prove salvate? Questa operazione non cancella i nomi o le impostazioni.',async()=>{
-    await dbPut('kv','historyList',[]);renderHistory([]);showToast('Storico cancellato');
-  });
+  $('clearHistory').onclick=()=>{
+    showConfirm('ATTENZIONE','Stai per cancellare TUTTO lo storico. Vuoi continuare?',()=>{
+      showConfirm('CONFERMA FINALE','Questa operazione cancellerà definitivamente tutte le prove salvate. Sei davvero sicuro?',async()=>{
+        await dbPut('kv','historyList',[]);
+        renderHistory([]);
+        showToast('Storico cancellato');
+      });
+    });
+  };
   document.querySelectorAll('[data-export-session]').forEach(btn=>{
     btn.onclick=()=>{
       const sessionId=btn.dataset.exportSession;
