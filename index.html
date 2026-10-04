@@ -293,25 +293,26 @@ function xlsxNumberCell(ref,value,style){
   return '<c r="'+ref+'"'+(style?' s="'+style+'"':'')+'><v>'+Number(value||0)+'</v></c>';
 }
 function exportExcel(items){
-  const headers=['data_ora','classe','durata_min','circuito_m','numero','alunno','giri','metri'];
+  const headers=['posizione','data_ora','classe','durata_min','circuito_m','numero','alunno','giri','metri'];
   const data=[headers];
   for(const x of items){
     const d=new Date(x.timestamp);
     const parts=new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(d);
     const part=type=>parts.find(p=>p.type===type)?.value||'';
     const dataOra=part('day')+'/'+part('month')+'/'+part('year')+' '+part('hour')+':'+part('minute');
-    for(const st of x.students)data.push([dataOra,x.className,x.duration,x.circuit,st.n,st.name,st.laps,st.laps*x.circuit]);
+    const ranking=[...(x.students||[])].map(st=>({...st,laps:Number(st.laps||0),meters:Number(st.meters||((st.laps||0)*(x.circuit||0)))})).sort((a,b)=>b.meters-a.meters||b.laps-a.laps||a.n-b.n);
+    ranking.forEach((st,idx)=>data.push([idx+1,dataOra,x.className,x.duration,x.circuit,st.n,st.name,st.laps,st.meters]));
   }
   const rows=data.map((row,ri)=>{
     const cells=row.map((v,ci)=>{
       const ref=excelCol(ci+1)+String(ri+1);
       if(ri===0)return xlsxInlineCell(ref,v,1);
-      if(ci===2||ci===3||ci===4||ci===6||ci===7)return xlsxNumberCell(ref,v);
+      if(ci===0||ci===3||ci===4||ci===5||ci===7||ci===8)return xlsxNumberCell(ref,v);
       return xlsxInlineCell(ref,v);
     }).join('');
     return '<row r="'+(ri+1)+'">'+cells+'</row>';
   }).join('');
-  const sheet='<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView></sheetViews><cols><col min="1" max="1" width="20" customWidth="1"/><col min="2" max="2" width="18" customWidth="1"/><col min="3" max="4" width="14" customWidth="1"/><col min="5" max="5" width="10" customWidth="1"/><col min="6" max="6" width="22" customWidth="1"/><col min="7" max="8" width="10" customWidth="1"/></cols><sheetData>'+rows+'</sheetData><autoFilter ref="A1:H'+data.length+'"/></worksheet>';
+  const sheet='<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView></sheetViews><cols><col min="1" max="1" width="10" customWidth="1"/><col min="2" max="2" width="20" customWidth="1"/><col min="3" max="3" width="18" customWidth="1"/><col min="4" max="5" width="14" customWidth="1"/><col min="6" max="6" width="10" customWidth="1"/><col min="7" max="7" width="22" customWidth="1"/><col min="8" max="9" width="10" customWidth="1"/></cols><sheetData>'+rows+'</sheetData><autoFilter ref="A1:H'+data.length+'"/></worksheet>';
   const styles='<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Aptos"/></font><font><b/><sz val="11"/><name val="Aptos"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0"/></cellXfs></styleSheet>';
   const workbook='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Cooper" sheetId="1" r:id="rId1"/></sheets></workbook>';
   const rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
