@@ -130,6 +130,22 @@ function fmtTime(ms){const s=Math.max(0,Math.ceil(ms/1000));return String(Math.f
 function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function showToast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(showToast.t);showToast.t=setTimeout(()=>t.classList.remove('show'),1600)}
 let audioCtx=null;
+function unlockAudio(){
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return;
+    if(!audioCtx)audioCtx=new AC();
+    if(audioCtx.state==='suspended')audioCtx.resume().catch(()=>{});
+    const o=audioCtx.createOscillator();
+    const g=audioCtx.createGain();
+    const now=audioCtx.currentTime;
+    g.gain.setValueAtTime(0.00001,now);
+    o.connect(g);
+    g.connect(audioCtx.destination);
+    o.start(now);
+    o.stop(now+0.01);
+  }catch(e){}
+}
 function playTapSound(n=1){
   try{
     const AC=window.AudioContext||window.webkitAudioContext;
@@ -278,6 +294,7 @@ async function finishTest(reason){
 function showSettings(){clearInterval(timerHandle);timerHandle=null;activeSession=null;$('testScreen').classList.add('hidden');$('settingsScreen').classList.remove('hidden');loadHistoryPanel();closeMenu()}
 async function loadHistoryPanel(){if(!$('historyPanel').classList.contains('hidden'))renderHistory(await getHistoryList())}
 async function startTest(){
+  unlockAudio();
   const students=currentStudents();
   if(!students.length){showToast('Inserisci almeno un alunno');return}
   const duration=Number($('duration').value);
