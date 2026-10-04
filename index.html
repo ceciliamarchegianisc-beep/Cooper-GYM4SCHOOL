@@ -84,14 +84,35 @@ function dbGet(store,key){return new Promise((res,rej)=>{const t=db.transaction(
 function dbAll(store){return new Promise((res,rej)=>{const t=db.transaction(store,'readonly');const r=t.objectStore(store).getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 function dbDelete(store,key){return new Promise((res,rej)=>{const t=db.transaction(store,'readwrite');const r=t.objectStore(store).delete(key);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
 function dbClear(store){return new Promise((res,rej)=>{const t=db.transaction(store,'readwrite');const r=t.objectStore(store).clear();r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
-function queueSave(){saveChain=saveChain.then(async()=>{if(activeSession)await dbPut('kv','activeSession',structuredClone(activeSession));});return saveChain}
+function buildHistoryRecord(session){
+  return {
+    id:session.historyId,
+    sessionId:session.sessionId,
+    timestamp:session.startAt,
+    completedAt:session.completedAt||null,
+    status:session.finished ? (session.finishReason==='auto'?'completed':'interrupted') : 'in_progress',
+    className:session.className,
+    duration:session.duration,
+    circuit:session.circuit,
+    students:session.students.map(s=>({n:s.n,name:s.name,laps:s.laps,meters:s.laps*session.circuit}))
+  };
+}
+function queueSave(){
+  saveChain=saveChain.then(async()=>{
+    if(!activeSession)return;
+    const snapshot=structuredClone(activeSession);
+    await dbPut('kv','activeSession',snapshot);
+    if(snapshot.historyId!==undefined) await dbPut('history',snapshot.historyId,buildHistoryRecord(snapshot));
+  }).catch(e=>{console.error(e);showToast('Salvataggio in corso: dati mantenuti localmente');});
+  return saveChain;
+}
 function fmtTime(ms){const s=Math.max(0,Math.ceil(ms/1000));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
 function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function showToast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(showToast.t);showToast.t=setTimeout(()=>t.classList.remove('show'),1600)}
 function showConfirm(title,text,onConfirm){$('modalTitle').textContent=title;$('modalText').textContent=text;$('modalBackdrop').classList.remove('hidden');const yes=$('modalConfirm');const no=$('modalCancel');const cleanup=()=>{$('modalBackdrop').classList.add('hidden');yes.onclick=null;no.onclick=null};no.onclick=cleanup;yes.onclick=()=>{cleanup();onConfirm()}}
 function renderInputs(names){const box=$('studentInputs');box.innerHTML='';for(let i=0;i<8;i++){const row=document.createElement('div');row.className='student-row';row.innerHTML='<div class="num">'+(i+1)+'</div><input data-idx="'+i+'" placeholder="Nome alunno '+(i+1)+'" value="'+escapeHtml(names[i]?.name||'')+'">';box.appendChild(row)}}
 function currentStudents(){return [...document.querySelectorAll('#studentInputs input')].map((el,i)=>({n:i+1,name:el.value.trim(),laps:0,lastTap:0,rapidIgnored:0,tapGuardUntil:0})).filter(x=>x.name)}
-function renderHistory(items){const c=$('historyContent');if(!items.length){c.innerHTML='<div class="zero-state">Nessuna prova salvata.</div>';return}items.sort((a,b)=>b.timestamp-a.timestamp);let html='<div class="actions" style="margin-top:0;margin-bottom:10px"><button class="btn small" id="exportCsv">ESPORTA CSV</button><button class="btn small danger" id="clearHistory">CANCELLA STORICO</button></div><div class="table-wrap"><table><thead><tr><th>Data</th><th>Classe</th><th>Durata</th><th>Circuito</th><th>Partecipanti</th></tr></thead><tbody>';for(const x of items){html+='<tr><td>'+new Date(x.timestamp).toLocaleString('it-IT')+'</td><td>'+escapeHtml(x.className||'')+'</td><td>'+x.duration+' min</td><td>'+x.circuit+' m</td><td>'+x.students.length+'</td></tr>'}html+='</tbody></table></div><p class="note">Lo storico contiene i risultati completi; l\'esportazione CSV è pensata per il successivo calcolatore GYM4SCHOOL.</p>';c.innerHTML=html;$('exportCsv').onclick=()=>exportCSV(items);$('clearHistory').onclick=()=>showConfirm('Cancella storico','Vuoi eliminare tutte le prove salvate? Questa operazione non cancella i nomi o le impostazioni.',async()=>{await dbClear('history');renderHistory([]);showToast('Storico cancellato')})}
+function renderHistory(items){const c=$('historyContent');if(!items.length){c.innerHTML='<div class="zero-state">Nessuna prova salvata.</div>';return}items.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));let html='<div class="actions" style="margin-top:0;margin-bottom:10px"><button class="btn small" id="exportCsv">ESPORTA CSV</button><button class="btn small danger" id="clearHistory">CANCELLA STORICO</button></div><div class="table-wrap"><table><thead><tr><th>Data</th><th>Classe</th><th>Durata</th><th>Circuito</th><th>Partecipanti</th><th>Stato</th></tr></thead><tbody>';for(const x of items){html+='<tr><td>'+new Date(x.timestamp).toLocaleString('it-IT')+'</td><td>'+escapeHtml(x.className||'')+'</td><td>'+x.duration+' min</td><td>'+x.circuit+' m</td><td>'+x.students.length+'</td><td>'+({completed:'Completata',interrupted:'Interrotta',in_progress:'In corso'}[x.status]||'Salvata')+'</td></tr>'}html+='</tbody></table></div><p class="note">Lo storico contiene i risultati completi; l\'esportazione CSV è pensata per il successivo calcolatore GYM4SCHOOL.</p>';c.innerHTML=html;$('exportCsv').onclick=()=>exportCSV(items);$('clearHistory').onclick=()=>showConfirm('Cancella storico','Vuoi eliminare tutte le prove salvate? Questa operazione non cancella i nomi o le impostazioni.',async()=>{await dbClear('history');renderHistory([]);showToast('Storico cancellato')})}
 function exportCSV(items){const rows=[['data','classe','durata_min','circuito_m','numero','alunno','giri','metri']];for(const x of items){for(const s of x.students)rows.push([new Date(x.timestamp).toISOString(),x.className,x.duration,x.circuit,s.n,s.name,s.laps,s.laps*x.circuit])}const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='cooper-gym4school.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 async function showHistory(){const p=$('historyPanel');p.classList.toggle('hidden');if(!p.classList.contains('hidden'))renderHistory(await dbAll('history'))}
 function buildLive(){const g=$('liveGrid');g.innerHTML='';const top=document.createElement('div');top.className='button-row';const timerBox=document.createElement('div');timerBox.className='board-timer';timerBox.innerHTML='<div class="timer" id="timer">00:00</div>';const bottom=document.createElement('div');bottom.className='button-row';activeSession.students.forEach((s,i)=>{const card=document.createElement('button');card.type='button';card.className='student-card '+studentColors[s.n-1];card.dataset.n=s.n;card.innerHTML='<div class="student-num">'+s.n+'</div><div class="student-name">'+escapeHtml(s.name)+'</div><div class="laps">GIRI <span class="lap-count">'+s.laps+'</span></div><div class="tap-msg">+1 GIRO</div>';card.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;e.preventDefault();registerLap(s.n,card)}, {passive:false});(i<4?top:bottom).appendChild(card)});g.append(top,timerBox,bottom)}
@@ -99,34 +120,42 @@ function registerLap(n,card){if(!activeSession||activeSession.finished)return;co
 function updateTimer(){if(!activeSession)return;const remain=activeSession.endAt-Date.now();$('timer').textContent=fmtTime(remain);if(remain<=0)finishTest('auto')}
 async function finishTest(reason){
   if(!activeSession||activeSession.finished)return;
+  await saveChain;
   const session=structuredClone(activeSession);
   session.finished=true;
+  session.finishReason=reason;
   session.completedAt=Date.now();
   clearInterval(timerHandle);timerHandle=null;
   try{
     await dbPut('kv','activeSession',session);
-    const record={
-      timestamp:Date.now(),
-      className:session.className,
-      duration:session.duration,
-      circuit:session.circuit,
-      reason,
-      students:session.students.map(s=>({n:s.n,name:s.name,laps:s.laps,meters:s.laps*session.circuit}))
-    };
-    await dbPut('history',record);
+    if(session.historyId!==undefined) await dbPut('history',session.historyId,buildHistoryRecord(session));
     await dbDelete('kv','activeSession');
     activeSession=session;
-    const msg=reason==='auto'?'Tempo scaduto. Risultati salvati.':'Prova interrotta. Risultati parziali salvati.';
-    showToast(msg);
-    setTimeout(()=>showSettings(),350);
+    showToast(reason==='auto'?'Tempo scaduto. Risultati salvati.':'Prova interrotta. Risultati salvati.');
+    setTimeout(()=>showSettings(),500);
   }catch(e){
+    console.error(e);
     await dbPut('kv','activeSession',session);
-    showToast('Salvataggio non riuscito: i dati sono stati mantenuti per il recupero.');
+    showToast('Errore di salvataggio: la prova è stata mantenuta per il recupero.');
   }
 }
 function showSettings(){clearInterval(timerHandle);timerHandle=null;activeSession=null;$('testScreen').classList.add('hidden');$('settingsScreen').classList.remove('hidden');loadHistoryPanel();closeMenu()}
 async function loadHistoryPanel(){if(!$('historyPanel').classList.contains('hidden'))renderHistory(await dbAll('history'))}
-async function startTest(){const students=currentStudents();if(!students.length){showToast('Inserisci almeno un alunno');return}const duration=Number($('duration').value);const circuit=Number($('circuit').value);if(!circuit||circuit<10){showToast('Inserisci la lunghezza del circuito');return}activeSession={version:1,className:$('className').value.trim(),duration,circuit,students,startAt:Date.now(),endAt:Date.now()+duration*60000,finished:false};await dbPut('kv','activeSession',structuredClone(activeSession));$('settingsScreen').classList.add('hidden');$('testScreen').classList.remove('hidden');$('timer').textContent=fmtTime(duration*60000);$('testMeta').textContent=(activeSession.className?activeSession.className+' · ':'')+circuit+' m';buildLive();clearInterval(timerHandle);timerHandle=setInterval(updateTimer,200);updateTimer();closeMenu()}
+async function startTest(){
+  const students=currentStudents();
+  if(!students.length){showToast('Inserisci almeno un alunno');return}
+  const duration=Number($('duration').value);
+  const circuit=Number($('circuit').value);
+  if(!circuit||circuit<10){showToast('Inserisci la lunghezza del circuito');return}
+  const now=Date.now();
+  activeSession={version:1,sessionId:String(now)+'-'+Math.random().toString(36).slice(2,8),className:$('className').value.trim(),duration,circuit,students,startAt:now,endAt:now+duration*60000,finished:false,finishReason:null};
+  activeSession.historyId=await dbPut('history',buildHistoryRecord(activeSession));
+  await dbPut('kv','activeSession',structuredClone(activeSession));
+  $('settingsScreen').classList.add('hidden');$('testScreen').classList.remove('hidden');
+  $('testMeta').textContent=(activeSession.className?activeSession.className+' · ':'')+circuit+' m';
+  buildLive();$('timer').textContent=fmtTime(duration*60000);
+  clearInterval(timerHandle);timerHandle=setInterval(updateTimer,200);updateTimer();closeMenu();
+}
 function toggleMenu(){menuOpen=!menuOpen;$('menuPanel').classList.toggle('hidden',!menuOpen)}
 function closeMenu(){menuOpen=false;$('menuPanel').classList.add('hidden')}
 async function restartTest(){
@@ -149,7 +178,24 @@ async function restartTest(){
 async function returnToSettings(){showConfirm('Torna a impostazioni','La prova verrà fermata e il risultato parziale verrà salvato nello storico. Continuare?',()=>finishTest('manual-settings'))}
 async function stopTest(){showConfirm('STOP','La prova verrà fermata e il risultato parziale verrà salvato nello storico. Continuare?',()=>finishTest('stop'))}
 async function fullscreen(){try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen();}catch(e){showToast('Schermo intero non disponibile su questo dispositivo')}}
-async function recover(){const s=await dbGet('kv','activeSession');if(!s||s.finished||s.endAt<=Date.now()){if(s)await dbDelete('kv','activeSession');return}activeSession=s;$('settingsScreen').classList.add('hidden');$('testScreen').classList.remove('hidden');buildLive();$('testMeta').textContent=(s.className?s.className+' · ':'')+s.circuit+' m';updateTimer();timerHandle=setInterval(updateTimer,200);showToast('Prova in corso ripristinata')}
+async function recover(){
+  const s=await dbGet('kv','activeSession');
+  if(!s)return;
+  if(s.finished){
+    await dbDelete('kv','activeSession');
+    return;
+  }
+  if(s.endAt<=Date.now()){
+    s.finished=true;s.finishReason='auto';s.completedAt=Date.now();
+    if(s.historyId!==undefined) await dbPut('history',s.historyId,buildHistoryRecord(s));
+    await dbDelete('kv','activeSession');
+    return;
+  }
+  activeSession=s;
+  $('settingsScreen').classList.add('hidden');$('testScreen').classList.remove('hidden');
+  buildLive();$('testMeta').textContent=(s.className?s.className+' · ':'')+s.circuit+' m';
+  updateTimer();timerHandle=setInterval(updateTimer,200);showToast('Prova in corso ripristinata');
+}
 $('startBtn').onclick=startTest;$('historyBtn').onclick=showHistory;$('clearBtn').onclick=()=>{document.querySelectorAll('#studentInputs input').forEach(x=>x.value='')};$('menuBtn').onclick=toggleMenu;$('fullscreenBtn').onclick=()=>{closeMenu();fullscreen()};$('restartBtn').onclick=restartTest;$('settingsFromTest').onclick=()=>{closeMenu();returnToSettings()};$('stopBtn').onclick=()=>{closeMenu();stopTest()};document.addEventListener('pointerdown',e=>{if(menuOpen&&!e.target.closest('.menu-wrap'))closeMenu()});
 (async()=>{await openDB();renderInputs(defaultNames);const settings=await dbGet('kv','settings');if(settings){$('className').value=settings.className||'';$('duration').value=settings.duration||6;$('circuit').value=settings.circuit||200;renderInputs(settings.names||defaultNames)};document.querySelectorAll('#studentInputs input').forEach(i=>i.addEventListener('input',async()=>{const names=[...document.querySelectorAll('#studentInputs input')].map(x=>({name:x.value}));await dbPut('kv','settings',{className:$('className').value,duration:$('duration').value,circuit:$('circuit').value,names})}));$('className').addEventListener('input',saveSettings);$('duration').addEventListener('change',saveSettings);$('circuit').addEventListener('input',saveSettings);await recover()})();
 async function saveSettings(){const names=[...document.querySelectorAll('#studentInputs input')].map(x=>({name:x.value}));await dbPut('kv','settings',{className:$('className').value,duration:$('duration').value,circuit:$('circuit').value,names})}
