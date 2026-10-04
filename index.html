@@ -272,19 +272,22 @@ function exportCSV(items){
     const parts=new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(d);
     const part=type=>parts.find(p=>p.type===type)?.value||'';
     const dataOra=part('day')+'/'+part('month')+'/'+part('year')+' '+part('hour')+':'+part('minute');
-    for(const st of x.students)rows.push([dataOra,x.className,x.duration,x.circuit,st.n,st.name,st.laps,st.laps*x.circuit]);
+    for(const st of x.students){
+      rows.push([dataOra,x.className,x.duration,x.circuit,st.n,st.name,st.laps,st.laps*x.circuit]);
+    }
   }
-  const csv='\\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\\r\\n')+'\\r\\n';
+  const csv='\\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n')+'\r\n';
   try{
-    const href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
-    a.href=href;
+    a.href=url;
     a.download='Cooper_GYM4SCHOOL.csv';
-    a.setAttribute('download','Cooper_GYM4SCHOOL.csv');
+    a.rel='noopener';
     a.style.display='none';
     document.body.appendChild(a);
     a.click();
-    setTimeout(()=>a.remove(),1000);
+    setTimeout(()=>{a.remove();URL.revokeObjectURL(url)},1500);
     showToast('CSV scaricato');
   }catch(e){
     console.error(e);
