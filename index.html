@@ -177,8 +177,15 @@ async function startTest(){
   if(!circuit||circuit<10){showToast('Inserisci la lunghezza del circuito');return}
   const now=Date.now();
   activeSession={version:1,sessionId:String(now)+'-'+Math.random().toString(36).slice(2,8),className:$('className').value.trim(),duration,circuit,students,startAt:now,endAt:now+duration*60000,finished:false,finishReason:null};
-  activeSession.historyId=await dbPut('history',buildHistoryRecord(activeSession));
-  await dbPut('kv','activeSession',structuredClone(activeSession));
+  try{
+    activeSession.historyId=await dbPut('history',undefined,buildHistoryRecord(activeSession));
+    await dbPut('kv','activeSession',structuredClone(activeSession));
+  }catch(e){
+    console.error(e);
+    activeSession=null;
+    showToast('Impossibile creare lo storico. Riprova.');
+    return;
+  }
   $('settingsScreen').classList.add('hidden');$('testScreen').classList.remove('hidden');
   $('testMeta').textContent=(activeSession.className?activeSession.className+' · ':'')+circuit+' m';
   buildLive();$('timer').textContent=fmtTime(duration*60000);
