@@ -85,7 +85,7 @@ function dbAll(store){return new Promise((res,rej)=>{const t=db.transaction(stor
 function dbDelete(store,key){return new Promise((res,rej)=>{const t=db.transaction(store,'readwrite');const r=t.objectStore(store).delete(key);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
 function dbClear(store){return new Promise((res,rej)=>{const t=db.transaction(store,'readwrite');const r=t.objectStore(store).clear();r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
 function buildHistoryRecord(session){
-  const record={
+  return {
     sessionId:session.sessionId,
     timestamp:session.startAt,
     completedAt:session.completedAt||null,
@@ -95,39 +95,26 @@ function buildHistoryRecord(session){
     circuit:session.circuit,
     students:session.students.map(s=>({n:s.n,name:s.name,laps:s.laps,meters:s.laps*session.circuit}))
   };
-  if(session.historyId!==undefined)record.id=session.historyId;
-  return record;
 }
-function dbHistoryAdd(record){
-  return new Promise((res,rej)=>{
-    const t=db.transaction('history','readwrite');
-    const s=t.objectStore('history');
-    const r=s.add(record);
-    r.onsuccess=()=>{record.id=r.result};
-    r.onerror=()=>rej(r.error);
-    t.oncomplete=()=>res(record.id);
-    t.onerror=()=>rej(t.error);
-    t.onabort=()=>rej(t.error||new Error('IndexedDB history transaction aborted'));
-  });
+async function getHistoryList(){
+  return (await dbGet('kv','historyList'))||[];
 }
-function dbHistoryPut(record){
-  return new Promise((res,rej)=>{
-    const t=db.transaction('history','readwrite');
-    const s=t.objectStore('history');
-    const r=s.put(record);
-    r.onsuccess=()=>{};
-    r.onerror=()=>rej(r.error);
-    t.oncomplete=()=>res(record.id);
-    t.onerror=()=>rej(t.error);
-    t.onabort=()=>rej(t.error||new Error('IndexedDB history transaction aborted'));
-  });
+async function saveHistoryRecord(record){
+  const list=await getHistoryList();
+  const index=list.findIndex(x=>x.sessionId===record.sessionId);
+  if(index>=0)list[index]=record;else list.unshift(record);
+  await dbPut('kv','historyList',list.slice(0,100));
+}
+async function queueHistorySnapshot(session){
+  const record=buildHistoryRecord(session);
+  await saveHistoryRecord(record);
 }
 function queueSave(){
   saveChain=saveChain.then(async()=>{
     if(!activeSession)return;
     const snapshot=structuredClone(activeSession);
     await dbPut('kv','activeSession',snapshot);
-    if(snapshot.historyId!==undefined)await dbHistoryPut(buildHistoryRecord(snapshot));
+    await queueHistorySnapshot(snapshot);
   }).catch(e=>{console.error(e);showToast('Salvataggio locale mantenuto');});
   return saveChain;
 }
@@ -163,11 +150,11 @@ function renderHistory(items){
   c.innerHTML=html;
   $('exportCsv').onclick=()=>exportCSV(items);
   $('clearHistory').onclick=()=>showConfirm('Cancella storico','Vuoi eliminare tutte le prove salvate? Questa operazione non cancella i nomi o le impostazioni.',async()=>{
-    await dbClear('history');renderHistory([]);showToast('Storico cancellato');
+    await dbPut('kv','historyList',[]);renderHistory([]);showToast('Storico cancellato');
   });
 }
 function exportCSV(items){const rows=[['data','classe','durata_min','circuito_m','numero','alunno','giri','metri']];for(const x of items){for(const s of x.students)rows.push([new Date(x.timestamp).toISOString(),x.className,x.duration,x.circuit,s.n,s.name,s.laps,s.laps*x.circuit])}const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='cooper-gym4school.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-async function showHistory(){const p=$('historyPanel');p.classList.remove('hidden');try{renderHistory(await dbAll('history'));p.scrollIntoView({behavior:'smooth',block:'start'})}catch(e){console.error(e);$('historyContent').innerHTML='<div class="zero-state">Errore nella lettura dello storico.</div>'}}
+async function showHistory(){const p=$('historyPanel');p.classList.remove('hidden');try{renderHistory(await getHistoryList());p.scrollIntoView({behavior:'smooth',block:'start'})}catch(e){console.error(e);$('historyContent').innerHTML='<div class="zero-state">Errore nella lettura dello storico.</div>'}}
 function buildLive(){const g=$('liveGrid');g.innerHTML='';const top=document.createElement('div');top.className='button-row';const timerBox=document.createElement('div');timerBox.className='board-timer';timerBox.innerHTML='<div class="timer" id="timer">00:00</div>';const bottom=document.createElement('div');bottom.className='button-row';activeSession.students.forEach((s,i)=>{const card=document.createElement('button');card.type='button';card.className='student-card '+studentColors[s.n-1];card.dataset.n=s.n;card.innerHTML='<div class="student-num">'+s.n+'</div><div class="student-name">'+escapeHtml(s.name)+'</div><div class="laps">GIRI <span class="lap-count">'+s.laps+'</span></div><div class="tap-msg">+1 GIRO</div>';card.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;e.preventDefault();registerLap(s.n,card)}, {passive:false});(i<4?top:bottom).appendChild(card)});g.append(top,timerBox,bottom)}
 function registerLap(n,card){if(!activeSession||activeSession.finished)return;const s=activeSession.students.find(x=>x.n===n);if(!s)return;const now=performance.now();if(s.tapGuardUntil&&now<s.tapGuardUntil){if((s.rapidIgnored||0)>0)s.rapidIgnored--;return}s.tapGuardUntil=now+1500;s.rapidIgnored=2;s.lastTap=now;s.laps++;card.querySelector('.lap-count').textContent=s.laps;card.classList.remove('flash');void card.offsetWidth;card.classList.add('flash');setTimeout(()=>card.classList.remove('flash'),220);queueSave()}
 function updateTimer(){if(!activeSession)return;const remain=activeSession.endAt-Date.now();$('timer').textContent=fmtTime(remain);if(remain<=0)finishTest('auto')}
@@ -181,7 +168,7 @@ async function finishTest(reason){
   clearInterval(timerHandle);timerHandle=null;
   try{
     await dbPut('kv','activeSession',session);
-    if(session.historyId!==undefined) await dbHistoryPut(buildHistoryRecord(session));
+    await saveHistoryRecord(buildHistoryRecord(session));
     await dbDelete('kv','activeSession');
     activeSession=session;
     showToast(reason==='auto'?'Tempo scaduto. Risultati salvati.':'Prova interrotta. Risultati salvati.');
@@ -193,7 +180,7 @@ async function finishTest(reason){
   }
 }
 function showSettings(){clearInterval(timerHandle);timerHandle=null;activeSession=null;$('testScreen').classList.add('hidden');$('settingsScreen').classList.remove('hidden');loadHistoryPanel();closeMenu()}
-async function loadHistoryPanel(){if(!$('historyPanel').classList.contains('hidden'))renderHistory(await dbAll('history'))}
+async function loadHistoryPanel(){if(!$('historyPanel').classList.contains('hidden'))renderHistory(await getHistoryList())}
 async function startTest(){
   const students=currentStudents();
   if(!students.length){showToast('Inserisci almeno un alunno');return}
@@ -203,7 +190,7 @@ async function startTest(){
   const now=Date.now();
   activeSession={version:1,sessionId:String(now)+'-'+Math.random().toString(36).slice(2,8),className:$('className').value.trim(),duration,circuit,students,startAt:now,endAt:now+duration*60000,finished:false,finishReason:null};
   try{
-    activeSession.historyId=await dbHistoryAdd(buildHistoryRecord(activeSession));
+    await saveHistoryRecord(buildHistoryRecord(activeSession));
     await dbPut('kv','activeSession',structuredClone(activeSession));
   }catch(e){
     console.error(e);
@@ -247,7 +234,7 @@ async function recover(){
   }
   if(s.endAt<=Date.now()){
     s.finished=true;s.finishReason='auto';s.completedAt=Date.now();
-    if(s.historyId!==undefined) await dbHistoryPut(buildHistoryRecord(s));
+    await saveHistoryRecord(buildHistoryRecord(s));
     await dbDelete('kv','activeSession');
     return;
   }
