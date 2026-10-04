@@ -141,6 +141,7 @@ function renderHistory(items){
     })).sort((a,b)=>b.meters-a.meters || b.laps-a.laps || a.n-b.n);
 
     html+='<div class="panel history-report" data-session-id="'+escapeHtml(x.sessionId||'')+'" style="margin-bottom:14px;padding:14px">';
+    html+='<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px"><button class="btn small" data-export-session="'+escapeHtml(x.sessionId||'')+'">ESPORTA CSV</button><button class="btn small danger" data-delete-session="'+escapeHtml(x.sessionId||'')+'">ELIMINA</button></div>';
     html+='<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap"><button class="btn small danger" data-delete-session="'+escapeHtml(x.sessionId||'')+'">ELIMINA</button>';
     html+='<div><strong>'+new Date(x.timestamp||Date.now()).toLocaleString('it-IT')+'</strong><div class="note">'+escapeHtml(x.className||'Classe non indicata')+' · '+x.duration+' min · circuito '+x.circuit+' m</div></div>';
     html+='<div><strong>'+status+'</strong></div></div>';
@@ -167,6 +168,13 @@ function renderHistory(items){
   $('exportCsv').onclick=()=>exportCSV(items);
   $('clearHistory').onclick=()=>showConfirm('Cancella storico','Vuoi eliminare tutte le prove salvate? Questa operazione non cancella i nomi o le impostazioni.',async()=>{
     await dbPut('kv','historyList',[]);renderHistory([]);showToast('Storico cancellato');
+  });
+  document.querySelectorAll('[data-export-session]').forEach(btn=>{
+    btn.onclick=()=>{
+      const sessionId=btn.dataset.exportSession;
+      const record=items.find(x=>x.sessionId===sessionId);
+      if(record)exportCSV([record]);
+    };
   });
   document.querySelectorAll('[data-delete-session]').forEach(btn=>{
     btn.onclick=()=>{
