@@ -135,7 +135,7 @@ function playTapSound(n=1){
     const AC=window.AudioContext||window.webkitAudioContext;
     if(!AC)return;
     if(!audioCtx)audioCtx=new AC();
-    if(audioCtx.state==='suspended')audioCtx.resume();
+    const startSound=()=>{
 
     const pairs=[
       [523.25,783.99],
@@ -166,6 +166,12 @@ function playTapSound(n=1){
 
     playNote(f1,now,0.075,0.26);
     playNote(f2,now+0.09,0.12,0.30);
+    };
+    if(audioCtx.state==='suspended'){
+      audioCtx.resume().then(startSound).catch(()=>{});
+    }else{
+      startSound();
+    }
   }catch(e){}
 }
 function showConfirm(title,text,onConfirm){$('modalTitle').textContent=title;$('modalText').textContent=text;$('modalBackdrop').classList.remove('hidden');const yes=$('modalConfirm');const no=$('modalCancel');const cleanup=()=>{$('modalBackdrop').classList.add('hidden');yes.onclick=null;no.onclick=null};no.onclick=cleanup;yes.onclick=()=>{cleanup();onConfirm()}}
