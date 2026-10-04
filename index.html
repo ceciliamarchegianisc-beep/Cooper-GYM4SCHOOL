@@ -112,9 +112,37 @@ function showToast(msg){const t=$('toast');t.textContent=msg;t.classList.add('sh
 function showConfirm(title,text,onConfirm){$('modalTitle').textContent=title;$('modalText').textContent=text;$('modalBackdrop').classList.remove('hidden');const yes=$('modalConfirm');const no=$('modalCancel');const cleanup=()=>{$('modalBackdrop').classList.add('hidden');yes.onclick=null;no.onclick=null};no.onclick=cleanup;yes.onclick=()=>{cleanup();onConfirm()}}
 function renderInputs(names){const box=$('studentInputs');box.innerHTML='';for(let i=0;i<8;i++){const row=document.createElement('div');row.className='student-row';row.innerHTML='<div class="num">'+(i+1)+'</div><input data-idx="'+i+'" placeholder="Nome alunno '+(i+1)+'" value="'+escapeHtml(names[i]?.name||'')+'">';box.appendChild(row)}}
 function currentStudents(){return [...document.querySelectorAll('#studentInputs input')].map((el,i)=>({n:i+1,name:el.value.trim(),laps:0,lastTap:0,rapidIgnored:0,tapGuardUntil:0})).filter(x=>x.name)}
-function renderHistory(items){const c=$('historyContent');if(!items.length){c.innerHTML='<div class="zero-state">Nessuna prova salvata.</div>';return}items.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));let html='<div class="actions" style="margin-top:0;margin-bottom:10px"><button class="btn small" id="exportCsv">ESPORTA CSV</button><button class="btn small danger" id="clearHistory">CANCELLA STORICO</button></div><div class="table-wrap"><table><thead><tr><th>Data</th><th>Classe</th><th>Durata</th><th>Circuito</th><th>Partecipanti</th><th>Stato</th></tr></thead><tbody>';for(const x of items){html+='<tr><td>'+new Date(x.timestamp).toLocaleString('it-IT')+'</td><td>'+escapeHtml(x.className||'')+'</td><td>'+x.duration+' min</td><td>'+x.circuit+' m</td><td>'+x.students.length+'</td><td>'+({completed:'Completata',interrupted:'Interrotta',in_progress:'In corso'}[x.status]||'Salvata')+'</td></tr>'}html+='</tbody></table></div><p class="note">Lo storico contiene i risultati completi; l\'esportazione CSV è pensata per il successivo calcolatore GYM4SCHOOL.</p>';c.innerHTML=html;$('exportCsv').onclick=()=>exportCSV(items);$('clearHistory').onclick=()=>showConfirm('Cancella storico','Vuoi eliminare tutte le prove salvate? Questa operazione non cancella i nomi o le impostazioni.',async()=>{await dbClear('history');renderHistory([]);showToast('Storico cancellato')})}
+function renderHistory(items){
+  const c=$('historyContent');
+  if(!items.length){
+    c.innerHTML='<div class="zero-state">Nessuna prova salvata.</div>';
+    return;
+  }
+  items.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
+  let html='<div class="actions" style="margin-top:0;margin-bottom:14px"><button class="btn small" id="exportCsv">ESPORTA CSV</button><button class="btn small danger" id="clearHistory">CANCELLA STORICO</button></div>';
+  for(const x of items){
+    const status=({completed:'Completata',interrupted:'Interrotta',in_progress:'In corso'}[x.status]||'Salvata');
+    html+='<div class="panel history-report" style="margin-bottom:14px;padding:14px">';
+    html+='<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">';
+    html+='<div><strong>'+new Date(x.timestamp||Date.now()).toLocaleString('it-IT')+'</strong><div class="note">'+escapeHtml(x.className||'Classe non indicata')+' · '+x.duration+' min · circuito '+x.circuit+' m</div></div>';
+    html+='<div><strong>'+status+'</strong></div></div>';
+    html+='<div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>N.</th><th>Alunno</th><th>Giri</th><th>Metri</th></tr></thead><tbody>';
+    for(const s of (x.students||[])){
+      html+='<tr><td>'+s.n+'</td><td>'+escapeHtml(s.name||'')+'</td><td>'+Number(s.laps||0)+'</td><td>'+Number(s.meters||((s.laps||0)*(x.circuit||0)))+'</td></tr>';
+    }
+    html+='</tbody></table></div>';
+    const totalMeters=(x.students||[]).reduce((sum,s)=>sum+Number(s.meters||((s.laps||0)*(x.circuit||0))),0);
+    html+='<div class="note" style="margin-top:8px">Metri complessivi registrati: <strong>'+totalMeters+' m</strong></div>';
+    html+='</div>';
+  }
+  c.innerHTML=html;
+  $('exportCsv').onclick=()=>exportCSV(items);
+  $('clearHistory').onclick=()=>showConfirm('Cancella storico','Vuoi eliminare tutte le prove salvate? Questa operazione non cancella i nomi o le impostazioni.',async()=>{
+    await dbClear('history');renderHistory([]);showToast('Storico cancellato');
+  });
+}
 function exportCSV(items){const rows=[['data','classe','durata_min','circuito_m','numero','alunno','giri','metri']];for(const x of items){for(const s of x.students)rows.push([new Date(x.timestamp).toISOString(),x.className,x.duration,x.circuit,s.n,s.name,s.laps,s.laps*x.circuit])}const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='cooper-gym4school.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-async function showHistory(){const p=$('historyPanel');p.classList.toggle('hidden');if(!p.classList.contains('hidden'))renderHistory(await dbAll('history'))}
+async function showHistory(){const p=$('historyPanel');p.classList.remove('hidden');renderHistory(await dbAll('history'));p.scrollIntoView({behavior:'smooth',block:'start'})}
 function buildLive(){const g=$('liveGrid');g.innerHTML='';const top=document.createElement('div');top.className='button-row';const timerBox=document.createElement('div');timerBox.className='board-timer';timerBox.innerHTML='<div class="timer" id="timer">00:00</div>';const bottom=document.createElement('div');bottom.className='button-row';activeSession.students.forEach((s,i)=>{const card=document.createElement('button');card.type='button';card.className='student-card '+studentColors[s.n-1];card.dataset.n=s.n;card.innerHTML='<div class="student-num">'+s.n+'</div><div class="student-name">'+escapeHtml(s.name)+'</div><div class="laps">GIRI <span class="lap-count">'+s.laps+'</span></div><div class="tap-msg">+1 GIRO</div>';card.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;e.preventDefault();registerLap(s.n,card)}, {passive:false});(i<4?top:bottom).appendChild(card)});g.append(top,timerBox,bottom)}
 function registerLap(n,card){if(!activeSession||activeSession.finished)return;const s=activeSession.students.find(x=>x.n===n);if(!s)return;const now=performance.now();if(s.tapGuardUntil&&now<s.tapGuardUntil){if((s.rapidIgnored||0)>0)s.rapidIgnored--;return}s.tapGuardUntil=now+1500;s.rapidIgnored=2;s.lastTap=now;s.laps++;card.querySelector('.lap-count').textContent=s.laps;card.classList.remove('flash');void card.offsetWidth;card.classList.add('flash');setTimeout(()=>card.classList.remove('flash'),220);queueSave()}
 function updateTimer(){if(!activeSession)return;const remain=activeSession.endAt-Date.now();$('timer').textContent=fmtTime(remain);if(remain<=0)finishTest('auto')}
